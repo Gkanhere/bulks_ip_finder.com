@@ -1,1 +1,150 @@
-index
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>City to IP Finder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .result-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      min-height: 150px;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      font-family: monospace;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>City to IP Finder 🌍</h1>
+    <input type="text" id="cityInput" placeholder="Enter up to 250 city names (comma-separated)">
+    <button onclick="findIPs()">🔍 Search</button>
+    <button onclick="copyToClipboard()">📋 Copy to clipboard</button>
+    <button onclick="downloadAsExcel()">⬇️ Download as Excel</button>
+    <div class="result-box" id="output"></div>
+  </div>
+
+  <script>
+    let ipData = [];
+
+    async function loadExcelData() {
+      const response = await fetch("city-ip-db.xlsx");
+      const arrayBuffer = await response.arrayBuffer();
+      const data = new Uint8Array(arrayBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      ipData = XLSX.utils.sheet_to_json(firstSheet);
+    }
+
+    function findIPs() {
+      const input = document.getElementById("cityInput").value;
+      if (!ipData.length) {
+        alert("IP data not loaded.");
+        return;
+      }
+
+      const rawCities = input.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+      const uniqueCities = [...new Set(rawCities)].slice(0, 250);
+      const results = [];
+
+      for (let city of uniqueCities) {
+        const matches = ipData.filter(row =>
+          row["country"]?.toLowerCase() === "united states" &&
+          row["city"]?.toLowerCase() === city
+        );
+
+        if (matches.length) {
+          const uniqueIPs = [...new Set(matches.map(r => r["ip"]))];
+          uniqueIPs.forEach(ip => results.push({ city, ip }));
+        }
+      }
+
+      const outputBox = document.getElementById("output");
+      if (results.length === 0) {
+        outputBox.innerText = "No IPs found for the entered cities.";
+      } else {
+        outputBox.innerText = results.map(r => `${r.city}: ${r.ip}`).join("\n");
+      }
+
+      window.lastResults = results;
+    }
+
+    function copyToClipboard() {
+      const output = document.getElementById("output").innerText;
+      if (!output) return;
+      navigator.clipboard.writeText(output);
+      alert("Copied to clipboard!");
+    }
+
+    function downloadAsExcel() {
+      if (!window.lastResults?.length) return;
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(window.lastResults);
+      XLSX.utils.book_append_sheet(wb, ws, "City IPs");
+      XLSX.writeFile(wb, "city_ip_results.xlsx");
+    }
+
+    // Load Excel on page load
+    window.onload = loadExcelData;
+  </script>
+</body>
+</html>
