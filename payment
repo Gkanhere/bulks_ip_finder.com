@@ -1,0 +1,32 @@
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<button id="pay-btn">Pay with UPI</button>
+
+<script>
+document.getElementById('pay-btn').onclick = function(e) {
+    var options = {
+        "key": "YOUR_PUBLIC_KEY", // From Razorpay Dashboard
+        "amount": "50000", // Amount in paise (₹500)
+        "currency": "INR",
+        "name": "My Website",
+        "description": "Test Transaction",
+        "order_id": "order_DBJOWzybf0sJbb", // From backend
+        "handler": function (response){
+            alert("Payment successful: " + response.razorpay_payment_id);
+        },
+        "prefill": {
+            "name": "Customer Name",
+            "email": "customer@example.com",
+            "contact": "9876543210"
+        },
+        "method": {
+            upi: true // Enables UPI option
+        },
+        "theme": {
+            "color": "#3399cc"
+        }
+    };
+    var rzp1 = new Razorpay(options);
+    rzp1.open();
+    e.preventDefault();
+}
+</script>
